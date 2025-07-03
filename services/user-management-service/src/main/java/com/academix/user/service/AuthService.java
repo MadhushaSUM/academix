@@ -9,7 +9,7 @@ import com.academix.user.exception.UserAlreadyExistsException;
 import com.academix.user.model.Role;
 import com.academix.user.model.User;
 import com.academix.user.repository.UserRepository;
-import com.academix.user.util.JwtTokenProvider; // We'll create this in Phase 4
+import com.academix.user.util.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
