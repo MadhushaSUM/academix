@@ -1,7 +1,7 @@
 # --- BUILD STAGE ---
 # Use a Maven base image with OpenJDK 17 for building the application.
 # This stage contains the JDK and Maven necessary to compile your Java code.
-FROM maven:3.9.6-openjdk-17 AS builder
+FROM maven:3.8.5-openjdk-17 AS builder
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -11,24 +11,22 @@ WORKDIR /app
 # We're copying them into a temporary structure that Maven expects.
 # Adjust paths if your `libs` directory structure is different.
 # NOTE: This assumes you run `docker build` from the monorepo root.
-COPY libs/common-models/pom.xml libs/common-models/
-COPY libs/common-utils/pom.xml libs/common-utils/
-COPY libs/common-models/src libs/common-models/src
-COPY libs/common-utils/src libs/common-utils/src
+#COPY libs/common-models/pom.xml libs/common-models/
+#COPY libs/common-utils/pom.xml libs/common-utils/
+#COPY libs/common-models/src libs/common-models/src
+#COPY libs/common-utils/src libs/common-utils/src
 
 # Copy the parent 'services' pom.xml and the service's pom.xml.
 # These also change less frequently than the actual code.
+COPY pom.xml ./
 COPY services/pom.xml services/
-COPY services/user-management-service/pom.xml services/user-management-service/
+COPY services/user-management-service services/user-management-service/
 
 # Download all project dependencies (including those for 'libs' and 'services')
 # This caches dependencies, so if only code changes, this step is skipped.
 # We go into the specific service directory for the build to generate its JAR.
 # The `../` is relative to the WORKDIR /app.
-RUN --mount=type=bind,source=services/user-management-service,target=services/user-management-service \
-    --mount=type=bind,source=services,target=services \
-    --mount=type=bind,source=libs,target=libs \
-    mvn -f services/user-management-service/pom.xml clean install -DskipTests
+RUN mvn -f services/user-management-service/pom.xml clean install -DskipTests
 
 # --- RUNTIME STAGE ---
 # Use a lightweight JRE base image for running the application.

@@ -67,7 +67,7 @@ services:
 
     # Map ports for direct access to the database from your host (e.g., using a DB client).
     ports:
-      - "5432:5432" # Map host port 5432 to container port 5432
+      - "5433:5432" # Map host port 5432 to container port 5432
 
     # Define environment variables required by the PostgreSQL image.
     environment:
