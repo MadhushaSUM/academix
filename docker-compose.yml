@@ -1,0 +1,99 @@
+# Version of the Docker Compose file format.
+# '3.8' is a good recent version that supports many useful features.
+version: '3.8'
+
+# Define the services (containers) that make up your application.
+services:
+  # ----------------------------------------
+  # User Management Service
+  # ----------------------------------------
+  user-management-service:
+    # Build the image from the Dockerfile in the specified context.
+    # Context points to the directory containing the Dockerfile.
+    build:
+      context: . # Build context is the monorepo root.
+      dockerfile: services/user-management-service/Dockerfile # Path to the service's Dockerfile
+
+    # Give the container a custom name for easier identification in logs and `docker ps`.
+    container_name: user-management-service
+
+    # Map ports from the host to the container.
+    # Format: "HOST_PORT:CONTAINER_PORT"
+    # This allows you to access your Spring Boot app from your host machine.
+    ports:
+      - "8081:8080" # Map host port 8081 to container port 8080 (Spring Boot default)
+
+    # Define environment variables for the service.
+    # These override values in application.properties/yml or provide new ones.
+    environment:
+      # Database connection details for PostgreSQL
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql:5432/academix_users_db
+      SPRING_DATASOURCE_USERNAME: academix_user
+      SPRING_DATASOURCE_PASSWORD: academix_password
+      # Spring Boot Actuator exposes health, info, metrics endpoints
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
+      # Log levels (useful for debugging in development)
+      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB: DEBUG
+      LOGGING_LEVEL_COM_LMS: DEBUG # Adjust to your base package for granular logging
+
+    # Declare dependencies on other services.
+    # This ensures PostgreSQL starts before user-management-service.
+    depends_on:
+      - postgresql
+
+    # Connect this service to the custom network defined below.
+    networks:
+      - academix-network
+
+    # Mount volumes for hot-reloading (optional, but good for local dev).
+    # This maps your local source code into the container, so changes are detected
+    # by Spring Boot DevTools without rebuilding the Docker image.
+    volumes:
+      - ./services/user-management-service:/app/services/user-management-service # Mount service dir
+      - ./libs:/app/libs # Mount shared libs
+      # Mount Maven local repository to avoid re-downloading dependencies on every build
+      - ~/.m2:/root/.m2
+      # Optional: Mount your application.properties/yml if you want to modify them without rebuilding
+      # - ./services/user-management-service/src/main/resources/application.properties:/app/services/user-management-service/src/main/resources/application.properties
+
+  # ----------------------------------------
+  # PostgreSQL Database Service
+  # ----------------------------------------
+  postgresql:
+    # Use the official PostgreSQL Docker image from Docker Hub.
+    image: postgres:15.6-alpine # Using alpine for a smaller image size
+
+    container_name: academix-user-db
+
+    # Map ports for direct access to the database from your host (e.g., using a DB client).
+    ports:
+      - "5432:5432" # Map host port 5432 to container port 5432
+
+    # Define environment variables required by the PostgreSQL image.
+    environment:
+      POSTGRES_DB: academix_users_db # Database name
+      POSTGRES_USER: academix_user    # Database username
+      POSTGRES_PASSWORD: academix_password # Database password
+      PGDATA: /var/lib/postgresql/data/pgdata # Custom data directory inside container
+
+    # Define volumes for data persistence.
+    # Named volumes are preferred for database data.
+    volumes:
+      - pg_data:/var/lib/postgresql/data # This will persist the database data
+      # Optional: Mount an initialization script for the database (e.g., for schema creation)
+      # - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+    # Connect this service to the custom network.
+    networks:
+      - academix-network
+
+# Define custom networks for inter-service communication.
+# This creates an isolated network where services can communicate by their service names.
+networks:
+  academix-network:
+    driver: bridge # Default driver for a single host
+
+# Define named volumes for data persistence.
+# These volumes store data outside the container lifecycle, so data isn't lost on container removal.
+volumes:
+  pg_data: # The name of the volume for PostgreSQL data
