@@ -1,9 +1,6 @@
 package com.academix.user.controller;
 
-import com.academix.user.dto.ChangePasswordRequestDto;
-import com.academix.user.dto.MessageResponseDto;
-import com.academix.user.dto.UpdateProfileRequestDto;
-import com.academix.user.dto.UserDto;
+import com.academix.user.dto.*;
 import com.academix.user.model.User;
 import com.academix.user.service.AuthService;
 import com.academix.user.service.UserService;
@@ -12,8 +9,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -94,5 +94,64 @@ public class UserController {
         log.info("Received profile update request for user: {}", currentUser.getUsername());
         UserDto updatedUserProfile = userService.updateMyProfile(currentUser.getId(), request);
         return new ResponseEntity<>(updatedUserProfile, HttpStatus.OK);
+    }
+
+    /**
+     * Retrieves a paginated list of all users. Accessible only by ADMIN role.
+     *
+     * @param pageable Pagination and sorting information (e.g., ?page=0&size=10&sort=username,asc)
+     * @return ResponseEntity with a Page of UserDto.
+     */
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Page<UserDto>> getAllUsers(Pageable pageable) {
+        log.info("Admin request to get all users. Page: {}, Size: {}", pageable.getPageNumber(), pageable.getPageSize());
+        Page<UserDto> usersPage = userService.getAllUsers(pageable);
+        return new ResponseEntity<>(usersPage, HttpStatus.OK);
+    }
+
+    /**
+     * Retrieves a specific user by ID. Accessible only by ADMIN role.
+     *
+     * @param userId The ID of the user to retrieve.
+     * @return ResponseEntity with UserDto.
+     */
+    @GetMapping("/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserDto> getUserById(@PathVariable Long userId) {
+        log.info("Admin request to get user by ID: {}", userId);
+        UserDto user = userService.getUserById(userId);
+        return new ResponseEntity<>(user, HttpStatus.OK);
+    }
+
+    /**
+     * Allows an ADMIN to update a specific user's details.
+     *
+     * @param userId The ID of the user to update.
+     * @param request The AdminUpdateUserRequestDto with updated fields.
+     * @return ResponseEntity with the updated UserDto.
+     */
+    @PatchMapping("/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserDto> updateUserByAdmin(
+            @PathVariable Long userId,
+            @Valid @RequestBody AdminUpdateUserRequestDto request) {
+        log.info("Admin request to update user ID: {}", userId);
+        UserDto updatedUser = userService.updateUserByAdmin(userId, request);
+        return new ResponseEntity<>(updatedUser, HttpStatus.OK);
+    }
+
+    /**
+     * Allows an ADMIN to delete (deactivate) a user.
+     *
+     * @param userId The ID of the user to delete/deactivate.
+     * @return ResponseEntity with a success message.
+     */
+    @DeleteMapping("/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<MessageResponseDto> deleteUser(@PathVariable Long userId) {
+        log.info("Admin request to delete (deactivate) user ID: {}", userId);
+        userService.deleteUser(userId);
+        return new ResponseEntity<>(new MessageResponseDto("User deactivated successfully."), HttpStatus.OK);
     }
 }

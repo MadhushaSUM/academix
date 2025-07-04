@@ -176,7 +176,7 @@ public class AuthService {
         userRepository.save(user);
 
         // This forces user to log in again from all devices
-        refreshTokenRepository.deleteByUser(user);
+        revokeAllRefreshTokensForUser(user);
         log.info("All refresh tokens invalidated for user ID {} after password change.", userId);
 
         log.info("Password changed successfully for user ID: {}", userId);
@@ -239,7 +239,7 @@ public class AuthService {
         passwordResetTokenRepository.save(resetToken);
 
         // Invalidate all refresh tokens for this user after password reset
-        refreshTokenRepository.deleteByUser(user);
+        revokeAllRefreshTokensForUser(user);
         log.info("All refresh tokens invalidated for user ID {} after password reset.", user.getId());
 
         log.info("Password reset successfully for user: {}", user.getUsername());
@@ -282,5 +282,10 @@ public class AuthService {
                 .username(user.getUsername())
                 .email(user.getEmail())
                 .build();
+    }
+
+    public void revokeAllRefreshTokensForUser(User user) {
+        // Invalidate all refresh tokens for this user after password reset
+        refreshTokenRepository.deleteByUser(user);
     }
 }
