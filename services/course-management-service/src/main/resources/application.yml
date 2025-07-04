@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: user-management-service
+    name: course-management-service
   datasource:
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME:lms_user}
@@ -45,9 +45,3 @@ logging:
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG # Show SQL queries from Hibernate
     org.hibernate.orm.jdbc.bind: TRACE # Show SQL parameter bindings
-
-app:
-  jwt:
-    secret: SGkgbXkgbmFtZSBpcyBNYWRodXNoYSBMYWtzaXRoYSBFZ29kYSBHYW1hZ2UuIEkgYW0gdGhlIGZvdW5kZXIgb2YgS25pZ2h0ZmFsbCBJbnRlcmFjdGl2ZS4gVGhlIHZpZGVvIGdhbWUgc3R1ZGlvIHdobyBwdWJsaXNoZWQgdGhlIEdPVFkgdGl0bGUgMjAzNw== # TODO: change this in production env
-    expiration-ms: 86400000 # 24 hours in milliseconds
-    internal-api-key: yourSuperSecretInternalApiKeyForServiceToServiceCalls #TODO: Not for prod

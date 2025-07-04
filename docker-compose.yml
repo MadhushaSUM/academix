@@ -1,4 +1,3 @@
-# Define the services (containers) that make up your application.
 services:
   # ----------------------------------------
   # User Management Service
@@ -23,19 +22,19 @@ services:
     # These override values in application.properties/yml or provide new ones.
     environment:
       # Database connection details for PostgreSQL
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql:5432/academix_users_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql-user:5432/academix_users_db
       SPRING_DATASOURCE_USERNAME: academix_user
       SPRING_DATASOURCE_PASSWORD: academix_password
       # Spring Boot Actuator exposes health, info, metrics endpoints
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
       # Log levels (useful for debugging in development)
       LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB: DEBUG
-      LOGGING_LEVEL_COM_LMS: DEBUG # Adjust to your base package for granular logging
+      LOGGING_LEVEL_COM_ACADEMIX: DEBUG # Corrected package name for logging
 
     # Declare dependencies on other services.
     # This ensures PostgreSQL starts before user-management-service.
     depends_on:
-      - postgresql
+      - postgresql-user # Dependency updated to the renamed service
 
     # Connect this service to the custom network defined below.
     networks:
@@ -52,18 +51,17 @@ services:
       # Optional: Mount your application.properties/yml if you want to modify them without rebuilding
       # - ./services/user-management-service/src/main/resources/application.properties:/app/services/user-management-service/src/main/resources/application.properties
 
-  # ----------------------------------------
-  # PostgreSQL Database Service
-  # ----------------------------------------
-  postgresql:
-    # Use the official PostgreSQL Docker image from Docker Hub.
-    image: postgres:15.6-alpine # Using alpine for a smaller image size
+  # -------------------------------------------------------
+  # PostgreSQL Database Service for user management service
+  # -------------------------------------------------------
+  postgresql-user:
+    image: postgres:15.6-alpine
 
     container_name: academix-user-db
 
     # Map ports for direct access to the database from your host (e.g., using a DB client).
     ports:
-      - "5433:5432" # Map host port 5433 to container port 5432
+      - "5433:5432"
 
     # Define environment variables required by the PostgreSQL image.
     environment:
@@ -73,15 +71,70 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata # Custom data directory inside container
 
     # Define volumes for data persistence.
-    # Named volumes are preferred for database data.
     volumes:
-      - pg_data:/var/lib/postgresql/data # This will persist the database data
+      - pg_data_user:/var/lib/postgresql/data
       # Optional: Mount an initialization script for the database (e.g., for schema creation)
       # - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
 
     # Connect this service to the custom network.
     networks:
       - academix-network
+
+  # ----------------------------------------
+  # Course Management Service
+  # ----------------------------------------
+  course-management-service:
+    build:
+      context: .
+      dockerfile: services/course-management-service/Dockerfile
+
+    container_name: course-management-service
+
+    ports:
+      - "8082:8080"
+
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql-course:5432/academix_courses_db
+      SPRING_DATASOURCE_USERNAME: academix_user
+      SPRING_DATASOURCE_PASSWORD: academix_password
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
+      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB: DEBUG
+      LOGGING_LEVEL_COM_ACADEMIX: DEBUG
+
+    depends_on:
+      - postgresql-course
+
+    networks:
+      - academix-network
+
+    volumes:
+      - ./services/course-management-service:/app/services/course-management-service
+      - ./libs:/app/libs
+      - ~/.m2:/root/.m2
+
+  # ---------------------------------------------------------
+  # PostgreSQL Database Service for course management service
+  # ---------------------------------------------------------
+  postgresql-course:
+    image: postgres:15.6-alpine
+
+    container_name: academix-course-db
+
+    ports:
+      - "5434:5432"
+
+    environment:
+      POSTGRES_DB: academix_courses_db
+      POSTGRES_USER: academix_user
+      POSTGRES_PASSWORD: academix_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+
+    volumes:
+      - pg_data_course:/var/lib/postgresql/data
+
+    networks:
+      - academix-network
+
 
 # Define custom networks for inter-service communication.
 # This creates an isolated network where services can communicate by their service names.
@@ -92,4 +145,5 @@ networks:
 # Define named volumes for data persistence.
 # These volumes store data outside the container lifecycle, so data isn't lost on container removal.
 volumes:
-  pg_data: # The name of the volume for PostgreSQL data
+  pg_data_user:
+  pg_data_course:

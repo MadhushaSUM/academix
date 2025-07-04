@@ -6,27 +6,21 @@ FROM maven:3.8.5-openjdk-17 AS builder
 # Set the working directory inside the container
 WORKDIR /app
 
-# Copy the common 'libs' modules from the monorepo first.
-# This leverages Docker cache as these dependencies change less frequently.
-# We're copying them into a temporary structure that Maven expects.
-# Adjust paths if your `libs` directory structure is different.
-# NOTE: This assumes you run `docker build` from the monorepo root.
+COPY pom.xml ./
+COPY services/pom.xml services/
 #COPY libs/common-models/pom.xml libs/common-models/
 #COPY libs/common-utils/pom.xml libs/common-utils/
+
+COPY services/user-management-service/pom.xml services/user-management-service/
+
+RUN mvn -B dependency:go-offline -DskipTests
+
 #COPY libs/common-models/src libs/common-models/src
 #COPY libs/common-utils/src libs/common-utils/src
 
-# Copy the parent 'services' pom.xml and the service's pom.xml.
-# These also change less frequently than the actual code.
-COPY pom.xml ./
-COPY services/pom.xml services/
-COPY services/user-management-service services/user-management-service/
+COPY services/user-management-service/src services/user-management-service/src
 
-# Download all project dependencies (including those for 'libs' and 'services')
-# This caches dependencies, so if only code changes, this step is skipped.
-# We go into the specific service directory for the build to generate its JAR.
-# The `../` is relative to the WORKDIR /app.
-RUN mvn -f services/user-management-service/pom.xml clean install -DskipTests
+RUN mvn -f services/user-management-service/pom.xml package -DskipTests
 
 # --- RUNTIME STAGE ---
 # Use a lightweight JRE base image for running the application.

@@ -21,6 +21,7 @@
 
     <modules>
         <module>user-management-service</module>
+        <module>course-management-service</module>
     </modules>
 
     <dependencyManagement>

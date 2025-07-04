@@ -1,6 +1,7 @@
 package com.academix.user.service;
 
 import com.academix.user.dto.AdminUpdateUserRequestDto;
+import com.academix.user.dto.InternalUserDto;
 import com.academix.user.dto.UpdateProfileRequestDto;
 import com.academix.user.dto.UserDto;
 import com.academix.user.exception.UserAlreadyExistsException;
@@ -16,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -160,6 +162,27 @@ public class UserService {
         log.info("User ID {} deactivated successfully (soft-deleted).", userId);
     }
 
+    @Transactional(readOnly = true)
+    public Optional<InternalUserDto> getInternalUserById(Long userId) {
+        log.debug("Internal API: Fetching user by ID: {}", userId);
+        return userRepository.findById(userId)
+                .map(this::convertToInternalDto);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<InternalUserDto> getInternalUserByUsername(String username) {
+        log.debug("Internal API: Fetching user by username: {}", username);
+        return userRepository.findByUsername(username)
+                .map(this::convertToInternalDto);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<InternalUserDto> getInternalUserByEmail(String email) {
+        log.debug("Internal API: Fetching user by email: {}", email);
+        return userRepository.findByEmail(email)
+                .map(this::convertToInternalDto);
+    }
+
     private UserDto convertToDto(User user) {
         return UserDto.builder()
                 .id(user.getId())
@@ -173,6 +196,20 @@ public class UserService {
                         .collect(Collectors.toSet()))
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
+                .build();
+    }
+
+    private InternalUserDto convertToInternalDto(User user) {
+        return InternalUserDto.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .enabled(user.isEnabled())
+                .roles(user.getRoles().stream()
+                        .map(role -> role.getName().name()) // Convert RoleName enum to String (e.g., "USER", "ADMIN")
+                        .collect(Collectors.toSet()))
                 .build();
     }
 }
