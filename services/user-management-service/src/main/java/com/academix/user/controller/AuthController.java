@@ -1,8 +1,6 @@
 package com.academix.user.controller;
 
-import com.academix.user.dto.AuthResponseDto;
-import com.academix.user.dto.LoginRequestDto;
-import com.academix.user.dto.RegisterRequestDto;
+import com.academix.user.dto.*;
 import com.academix.user.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -51,9 +49,26 @@ public class AuthController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    // - Token Refresh (/refresh-token)
-    // - Forgot Password (/forgot-password)
-    // - Reset Password (/reset-password)
+    @PostMapping("/refresh-token")
+    public ResponseEntity<AuthResponseDto> refreshToken(@Valid @RequestBody RefreshTokenRequestDto request) {
+        log.info("Received refresh token request.");
+        AuthResponseDto response = authService.refreshAccessToken(request);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<MessageResponseDto> forgotPassword(@Valid @RequestBody ForgotPasswordRequestDto request) {
+        log.info("Received forgot password request for email: {}", request.getEmail());
+        authService.forgotPassword(request);
+        return new ResponseEntity<>(new MessageResponseDto("Password reset link sent to your email."), HttpStatus.OK);
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<MessageResponseDto> resetPassword(@Valid @RequestBody ResetPasswordRequestDto request) {
+        log.info("Received reset password request with token.");
+        authService.resetPassword(request);
+        return new ResponseEntity<>(new MessageResponseDto("Password has been reset successfully."), HttpStatus.OK);
+    }
 
     @GetMapping("/hello")
     public String hello() {

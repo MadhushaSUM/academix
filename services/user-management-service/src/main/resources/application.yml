@@ -26,6 +26,8 @@ spring:
           issuer-uri: http://localhost:8080/realms/lms # Example for Keycloak, will use custom later
           jwk-set-uri: http://localhost:8080/realms/lms/protocol/openid-connect/certs # Example for Keycloak
 
+  profiles:
+    active: dev
 # Spring Boot Actuator settings
 management:
   endpoints:

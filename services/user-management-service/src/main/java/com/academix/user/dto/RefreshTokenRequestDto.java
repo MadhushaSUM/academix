@@ -1,5 +1,6 @@
 package com.academix.user.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,12 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AuthResponseDto {
-    private String accessToken;
+public class RefreshTokenRequestDto {
+    @NotBlank(message = "Refresh token is required")
     private String refreshToken;
-    private String tokenType = "Bearer";
-    private Long expiresIn;
-    private String userId;
-    private String username;
-    private String email;
 }
