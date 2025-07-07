@@ -5,19 +5,8 @@ FROM maven:3.8.5-openjdk-17 AS builder
 # Set the working directory inside the container
 WORKDIR /app
 
-COPY pom.xml ./
-COPY services/pom.xml services/
-#COPY libs/common-models/pom.xml libs/common-models/
-#COPY libs/common-utils/pom.xml libs/common-utils/
-
-COPY services/course-management-service/pom.xml services/course-management-service/
-
-RUN mvn -B dependency:go-offline -DskipTests
-
-#COPY libs/common-models/src libs/common-models/src
-#COPY libs/common-utils/src libs/common-utils/src
-
-COPY services/course-management-service/src services/course-management-service/src
+COPY ../../. .
+# Go up two levels to the monorepo root, then copy everything down.
 
 RUN mvn -f services/course-management-service/pom.xml package -DskipTests
 

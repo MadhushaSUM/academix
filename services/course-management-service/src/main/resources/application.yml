@@ -17,7 +17,15 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-  
+        jdbc:
+          lob:
+            non_contextual_creation: true
+
+  web:
+    resources:
+      add-mappings: false # Prevents Spring from adding default resource handlers
+
+
   # For Spring Security
   security:
     oauth2:
@@ -45,3 +53,13 @@ logging:
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG # Show SQL queries from Hibernate
     org.hibernate.orm.jdbc.bind: TRACE # Show SQL parameter bindings
+
+app:
+  jwt:
+    secret: SGkgbXkgbmFtZSBpcyBNYWRodXNoYSBMYWtzaXRoYSBFZ29kYSBHYW1hZ2UuIEkgYW0gdGhlIGZvdW5kZXIgb2YgS25pZ2h0ZmFsbCBJbnRlcmFjdGl2ZS4gVGhlIHZpZGVvIGdhbWUgc3R1ZGlvIHdobyBwdWJsaXNoZWQgdGhlIEdPVFkgdGl0bGUgMjAzNw== # TODO: change this in production env
+    expiration-ms: 86400000 # 24 hours in milliseconds
+    internal-api-key: yourSuperSecretInternalApiKeyForServiceToServiceCalls #TODO: Not for prod
+  client: # New section for client configurations
+    user-management-service:
+      base-url: http://user-management-service:8080 # Docker network name and container port
+      api-key: yourSuperSecretInternalApiKeyForServiceToServiceCalls # !!! MUST MATCH THE KEY IN user-management-service's app.yml !!!
