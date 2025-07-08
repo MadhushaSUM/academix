@@ -5,61 +5,41 @@ spring:
   application:
     name: course-management-service
   datasource:
-    url: ${SPRING_DATASOURCE_URL}
-    username: ${SPRING_DATASOURCE_USERNAME:lms_user}
-    password: ${SPRING_DATASOURCE_PASSWORD:lms_password}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgresql-course:5432/academix_courses_db}
+    username: ${SPRING_DATASOURCE_USERNAME:academix_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:academix_password}
     driver-class-name: org.postgresql.Driver
+  # JPA (Hibernate) configuration
   jpa:
     hibernate:
-      ddl-auto: update # 'none' or 'validate' in production and rely on Flyway/Liquibase.
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
-        jdbc:
-          lob:
-            non_contextual_creation: true
 
-  web:
-    resources:
-      add-mappings: false # Prevents Spring from adding default resource handlers
+eureka:
+  client:
+    enabled: true
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://discovery-server:8761/eureka}
+  instance:
+    hostname: course-management-service
+    prefer-ip-address: true
 
-
-  # For Spring Security
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: http://localhost:8080/realms/lms # Example for Keycloak, will use custom later
-          jwk-set-uri: http://localhost:8080/realms/lms/protocol/openid-connect/certs # Example for Keycloak
-
-  profiles:
-    active: dev
-# Spring Boot Actuator settings
 management:
   endpoints:
     web:
       exposure:
-        include: "health,info"
+        include: "*"
   endpoint:
     health:
       show-details: always
 
-# Logging Configuration
 logging:
   level:
+    root: INFO
+    org.springframework.web: DEBUG
+    org.hibernate: INFO
+    org.springframework.cloud.netflix: DEBUG
     com.academix: DEBUG
-    org.springframework.web: INFO
-    org.hibernate.SQL: DEBUG # Show SQL queries from Hibernate
-    org.hibernate.orm.jdbc.bind: TRACE # Show SQL parameter bindings
-
-app:
-  jwt:
-    secret: SGkgbXkgbmFtZSBpcyBNYWRodXNoYSBMYWtzaXRoYSBFZ29kYSBHYW1hZ2UuIEkgYW0gdGhlIGZvdW5kZXIgb2YgS25pZ2h0ZmFsbCBJbnRlcmFjdGl2ZS4gVGhlIHZpZGVvIGdhbWUgc3R1ZGlvIHdobyBwdWJsaXNoZWQgdGhlIEdPVFkgdGl0bGUgMjAzNw== # TODO: change this in production env
-    expiration-ms: 86400000 # 24 hours in milliseconds
-    internal-api-key: yourSuperSecretInternalApiKeyForServiceToServiceCalls #TODO: Not for prod
-  client: # New section for client configurations
-    user-management-service:
-      base-url: http://user-management-service:8080 # Docker network name and container port
-      api-key: yourSuperSecretInternalApiKeyForServiceToServiceCalls # !!! MUST MATCH THE KEY IN user-management-service's app.yml !!!

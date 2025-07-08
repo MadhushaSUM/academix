@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
@@ -13,28 +12,50 @@
 
     <artifactId>services</artifactId>
     <packaging>pom</packaging>
-    <name>LMS Services Parent</name>
-    <description>Parent POM for all individual LMS microservices</description>
+    <name>Academix Services Parent</name>
+    <description>Parent POM for all microservices in the Academix LMS</description>
 
-    <properties>
-    </properties>
-
-    <modules>
-        <module>user-management-service</module>
-        <module>course-management-service</module>
-    </modules>
-
-    <dependencyManagement>
-        <dependencies>
-        </dependencies>
-    </dependencyManagement>
+    <!-- Dependencies common to microservices -->
+    <dependencies>
+        <!-- Spring Boot Web Starter: For building RESTful applications -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <!-- Spring Boot Actuator: For monitoring and managing applications -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <!-- Lombok: For reducing boilerplate code (e.g., getters, setters) -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <!-- Spring Boot Test Starter: For testing Spring Boot applications -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 
     <build>
-        <pluginManagement>
-            <plugins>
-            </plugins>
-        </pluginManagement>
         <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
         </plugins>
     </build>
+
+    <!-- Modules: Defines the individual microservice projects -->
+    <modules>
+        <module>api-gateway</module>
+        <module>user-management-service</module>
+        <module>course-management-service</module>
+        <module>discovery-server</module>
+    </modules>
+
 </project>

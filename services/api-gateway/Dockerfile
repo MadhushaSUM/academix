@@ -4,16 +4,16 @@ WORKDIR /app
 
 COPY pom.xml .
 COPY services/pom.xml services/
-COPY services/user-management-service/pom.xml services/user-management-service/
+COPY services/api-gateway/pom.xml services/api-gateway/
 
 RUN --mount=type=bind,source=./pom.xml,target=/app/pom.xml \
     --mount=type=bind,source=./services/pom.xml,target=/app/services/services/pom.xml \
-    --mount=type=bind,source=./services/user-management-service/pom.xml,target=/app/services/user-management-service/pom.xml \
-    mvn -f services/user-management-service/pom.xml dependency:go-offline -B
+    --mount=type=bind,source=./services/api-gateway/pom.xml,target=/app/services/api-gateway/pom.xml \
+    mvn -f services/api-gateway/pom.xml dependency:go-offline -B
 
 COPY services/ services/
 
-RUN mvn clean install -DskipTests -pl services/user-management-service -am
+RUN mvn clean install -DskipTests -pl services/api-gateway -am
 
 # --- RUNTIME STAGE ---
 FROM eclipse-temurin:17-jre-focal
@@ -22,10 +22,10 @@ RUN groupadd --system appuser && useradd --system --create-home --gid appuser ap
 RUN mkdir /app && chown appuser:appuser /app
 WORKDIR /app
 
-COPY --from=builder /app/services/user-management-service/target/*.jar user-management-service.jar
+COPY --from=builder /app/services/api-gateway/target/*.jar api-gateway.jar
 
 EXPOSE 8080
 
 USER appuser
 
-ENTRYPOINT ["java", "-jar", "user-management-service.jar"]
+ENTRYPOINT ["java", "-jar", "api-gateway.jar"]

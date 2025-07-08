@@ -1,0 +1,56 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        # Route for User Management Service
+        - id: user-management-service-route
+          uri: lb://user-management-service # 'lb' for load-balancing via Eureka
+          predicates:
+            - Path=/users/**, /auth/**
+          filters:
+            - StripPrefix=2 # Removes /api/v1 from the path before forwarding
+
+        # Route for Course Management Service
+        - id: course-management-service-route
+          uri: lb://course-management-service
+          predicates:
+            - Path=/courses/**
+          filters:
+            - StripPrefix=2 # Removes /api/v1 from the path before forwarding
+
+  main:
+    web-application-type: reactive
+
+eureka:
+  client:
+    enabled: true
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://discovery-server:8761/eureka}
+  instance:
+    hostname: api-gateway
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.cloud.netflix: DEBUG
+    com.academix: DEBUG

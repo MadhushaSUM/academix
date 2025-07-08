@@ -1,98 +1,120 @@
+version: '3.8'
+
 services:
-  # ----------------------------------------
-  # User Management Service
-  # ----------------------------------------
-  user-management-service:
-    # Build the image from the Dockerfile in the specified context.
-    # Context points to the directory containing the Dockerfile.
-    build:
-      context: . # Build context is the monorepo root.
-      dockerfile: services/user-management-service/Dockerfile # Path to the service's Dockerfile
-
-    # Give the container a custom name for easier identification in logs and `docker ps`.
-    container_name: user-management-service
-
-    # Map ports from the host to the container.
-    # Format: "HOST_PORT:CONTAINER_PORT"
-    # This allows you to access your Spring Boot app from your host machine.
+  # -----------------------
+  # PostgreSQL Database Service for User Management
+  # -----------------------
+  postgresql-user:
+    image: postgres:15.6-alpine
+    container_name: academix-user-db
     ports:
-      - "8081:8080" # Map host port 8081 to container port 8080 (Spring Boot default)
-
-    # Define environment variables for the service.
-    # These override values in application.properties/yml or provide new ones.
+      - "5433:5432"
     environment:
-      # Database connection details for PostgreSQL
+      POSTGRES_DB: academix_users_db
+      POSTGRES_USER: academix_user
+      POSTGRES_PASSWORD: academix_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - pg_data_user:/var/lib/postgresql/data
+    networks:
+      - academix-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U academix_user -d academix_users_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # -----------------------
+  # PostgreSQL Database Service for Course Management
+  # -----------------------
+  postgresql-course:
+    image: postgres:15.6-alpine
+    container_name: academix-course-db
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_DB: academix_courses_db
+      POSTGRES_USER: academix_user
+      POSTGRES_PASSWORD: academix_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - pg_data_course:/var/lib/postgresql/data
+    networks:
+      - academix-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U academix_user -d academix_courses_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # -----------------------
+  # Eureka Discovery Server
+  # -----------------------
+  discovery-server:
+    build:
+      context: .
+      dockerfile: services/discovery-server/Dockerfile
+    container_name: discovery-server
+    ports:
+      - "8761:8761"
+    environment:
+      EUREKA_CLIENT_REGISTER-WITH-EUREKA: "false"
+      EUREKA_CLIENT_FETCH-REGISTRY: "false"
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
+      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK: INFO
+      LOGGING_LEVEL_COM_ACADEMIX: DEBUG
+    networks:
+      - academix-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # -----------------------
+  # User Management Service
+  # -----------------------
+  user-management-service:
+    build:
+      context: .
+      dockerfile: services/user-management-service/Dockerfile
+    container_name: user-management-service
+    ports:
+      - "8081:8080"
+    environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql-user:5432/academix_users_db
       SPRING_DATASOURCE_USERNAME: academix_user
       SPRING_DATASOURCE_PASSWORD: academix_password
-      # Spring Boot Actuator exposes health, info, metrics endpoints
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
-      # Log levels (useful for debugging in development)
       LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB: DEBUG
-      LOGGING_LEVEL_COM_ACADEMIX: DEBUG # Corrected package name for logging
-
-    # Declare dependencies on other services.
-    # This ensures PostgreSQL starts before user-management-service.
+      LOGGING_LEVEL_COM_ACADEMIX: DEBUG
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka
+      EUREKA_INSTANCE_HOSTNAME: user-management-service
     depends_on:
-      - postgresql-user # Dependency updated to the renamed service
-
-    # Connect this service to the custom network defined below.
+      postgresql-user:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
     networks:
       - academix-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
 
-    # Mount volumes for hot-reloading (optional, but good for local dev).
-    # This maps your local source code into the container, so changes are detected
-    # by Spring Boot DevTools without rebuilding the Docker image.
-    volumes:
-      - ./services/user-management-service:/app/services/user-management-service # Mount service dir
-      - ./libs:/app/libs # Mount shared libs
-      # Mount Maven local repository to avoid re-downloading dependencies on every build
-      - ~/.m2:/root/.m2
-      # Optional: Mount your application.properties/yml if you want to modify them without rebuilding
-      # - ./services/user-management-service/src/main/resources/application.properties:/app/services/user-management-service/src/main/resources/application.properties
-
-  # -------------------------------------------------------
-  # PostgreSQL Database Service for user management service
-  # -------------------------------------------------------
-  postgresql-user:
-    image: postgres:15.6-alpine
-
-    container_name: academix-user-db
-
-    # Map ports for direct access to the database from your host (e.g., using a DB client).
-    ports:
-      - "5433:5432"
-
-    # Define environment variables required by the PostgreSQL image.
-    environment:
-      POSTGRES_DB: academix_users_db # Database name
-      POSTGRES_USER: academix_user    # Database username
-      POSTGRES_PASSWORD: academix_password # Database password
-      PGDATA: /var/lib/postgresql/data/pgdata # Custom data directory inside container
-
-    # Define volumes for data persistence.
-    volumes:
-      - pg_data_user:/var/lib/postgresql/data
-      # Optional: Mount an initialization script for the database (e.g., for schema creation)
-      # - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
-
-    # Connect this service to the custom network.
-    networks:
-      - academix-network
-
-  # ----------------------------------------
+  # -------------------------
   # Course Management Service
-  # ----------------------------------------
+  # -------------------------
   course-management-service:
     build:
       context: .
       dockerfile: services/course-management-service/Dockerfile
-
     container_name: course-management-service
-
     ports:
       - "8082:8080"
-
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql-course:5432/academix_courses_db
       SPRING_DATASOURCE_USERNAME: academix_user
@@ -100,50 +122,60 @@ services:
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
       LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB: DEBUG
       LOGGING_LEVEL_COM_ACADEMIX: DEBUG
-
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka
+      EUREKA_INSTANCE_HOSTNAME: course-management-service
     depends_on:
-      - postgresql-course
-
+      postgresql-course:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
     networks:
       - academix-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
 
-    volumes:
-      - ./services/course-management-service:/app/services/course-management-service
-      - ./libs:/app/libs
-      - ~/.m2:/root/.m2
-
-  # ---------------------------------------------------------
-  # PostgreSQL Database Service for course management service
-  # ---------------------------------------------------------
-  postgresql-course:
-    image: postgres:15.6-alpine
-
-    container_name: academix-course-db
-
+  # -----------------------
+  # API Gateway Service
+  # -----------------------
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    container_name: api-gateway
     ports:
-      - "5434:5432"
-
+      - "8080:8080"
     environment:
-      POSTGRES_DB: academix_courses_db
-      POSTGRES_USER: academix_user
-      POSTGRES_PASSWORD: academix_password
-      PGDATA: /var/lib/postgresql/data/pgdata
-
-    volumes:
-      - pg_data_course:/var/lib/postgresql/data
-
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
+      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB: DEBUG
+      LOGGING_LEVEL_COM_ACADEMIX: DEBUG
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka # Passing Eureka URL
+      EUREKA_INSTANCE_HOSTNAME: api-gateway
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      user-management-service:
+        condition: service_healthy
+      course-management-service:
+        condition: service_healthy
     networks:
       - academix-network
-
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
 
 # Define custom networks for inter-service communication.
-# This creates an isolated network where services can communicate by their service names.
 networks:
   academix-network:
-    driver: bridge # Default driver for a single host
+    driver: bridge
 
 # Define named volumes for data persistence.
-# These volumes store data outside the container lifecycle, so data isn't lost on container removal.
 volumes:
   pg_data_user:
   pg_data_course:
