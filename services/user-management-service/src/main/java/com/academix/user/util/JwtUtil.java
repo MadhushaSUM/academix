@@ -1,5 +1,6 @@
 package com.academix.user.util;
 
+import com.academix.user.model.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -99,6 +100,12 @@ public class JwtUtil {
         claims.put("roles", userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList()));
+
+        // Add user ID as a claim
+        if (userDetails instanceof User) { // Cast to your User model to access the ID
+            claims.put("userId", ((User) userDetails).getId().toString());
+        }
+
         return createToken(claims, userDetails.getUsername());
     }
 

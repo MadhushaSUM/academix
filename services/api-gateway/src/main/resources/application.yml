@@ -15,7 +15,7 @@ spring:
         - id: user-management-service-route
           uri: lb://user-management-service # 'lb' for load-balancing via Eureka
           predicates:
-            - Path=/users/**, /auth/**
+            - Path=/api/v1/users/**, /api/v1/auth/**
           filters:
             - StripPrefix=2 # Removes /api/v1 from the path before forwarding
 
@@ -23,7 +23,7 @@ spring:
         - id: course-management-service-route
           uri: lb://course-management-service
           predicates:
-            - Path=/courses/**
+            - Path=/api/v1/courses/**
           filters:
             - StripPrefix=2 # Removes /api/v1 from the path before forwarding
 
@@ -38,6 +38,14 @@ eureka:
   instance:
     hostname: api-gateway
     prefer-ip-address: true
+
+# JWT Configuration
+jwt:
+  # IMPORTANT: Replace this with a strong, random, base64-encoded key.
+  # This key should be at least 256 bits (32 bytes) for HS256.
+  secret: WU9VUl9TVVBFUl9TRUNSRVRfSldUX0tFWV9USEFUX0lTX0FUX0xFQVNUXzI1Nl9CSVRTX0xPTkdfQU5EX0JBU0U2NF9FTkNPREVE
+  expiration:
+    ms: 86400000
 
 management:
   endpoints:
