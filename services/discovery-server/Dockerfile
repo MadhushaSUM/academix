@@ -9,14 +9,13 @@ COPY services/pom.xml services/
 
 COPY services/discovery-server/pom.xml services/discovery-server/
 
-RUN --mount=type=bind,source=./pom.xml,target=/app/pom.xml \
-    --mount=type=bind,source=./services/pom.xml,target=/app/services/services/pom.xml \
-    --mount=type=bind,source=./services/discovery-server/pom.xml,target=/app/services/discovery-server/pom.xml \
+RUN --mount=type=cache,target=/root/.m2 \
     mvn -f services/discovery-server/pom.xml dependency:go-offline -B
 
 COPY services/ services/
 
-RUN mvn clean install -DskipTests -pl services/discovery-server -am
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn clean install -DskipTests -pl services/discovery-server -am
 
 # --- RUNTIME STAGE ---
 FROM eclipse-temurin:17-jre-focal

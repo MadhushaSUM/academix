@@ -1,4 +1,3 @@
-# --- BUILD STAGE ---
 FROM maven:3.8.5-openjdk-17 AS builder
 WORKDIR /app
 
@@ -6,14 +5,13 @@ COPY pom.xml .
 COPY services/pom.xml services/
 COPY services/user-management-service/pom.xml services/user-management-service/
 
-RUN --mount=type=bind,source=./pom.xml,target=/app/pom.xml \
-    --mount=type=bind,source=./services/pom.xml,target=/app/services/services/pom.xml \
-    --mount=type=bind,source=./services/user-management-service/pom.xml,target=/app/services/user-management-service/pom.xml \
+RUN --mount=type=cache,target=/root/.m2 \
     mvn -f services/user-management-service/pom.xml dependency:go-offline -B
 
 COPY services/ services/
 
-RUN mvn clean install -DskipTests -pl services/user-management-service -am
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn clean install -DskipTests -pl services/user-management-service -am
 
 # --- RUNTIME STAGE ---
 FROM eclipse-temurin:17-jre-focal
@@ -25,7 +23,6 @@ WORKDIR /app
 COPY --from=builder /app/services/user-management-service/target/*.jar user-management-service.jar
 
 EXPOSE 8080
-
 USER appuser
 
 ENTRYPOINT ["java", "-jar", "user-management-service.jar"]

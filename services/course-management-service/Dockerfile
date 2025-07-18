@@ -6,14 +6,13 @@ COPY pom.xml .
 COPY services/pom.xml services/
 COPY services/course-management-service/pom.xml services/course-management-service/
 
-RUN --mount=type=bind,source=./pom.xml,target=/app/pom.xml \
-    --mount=type=bind,source=./services/pom.xml,target=/app/services/services/pom.xml \
-    --mount=type=bind,source=./services/course-management-service/pom.xml,target=/app/services/course-management-service/pom.xml \
+RUN --mount=type=cache,target=/root/.m2 \
     mvn -f services/course-management-service/pom.xml dependency:go-offline -B
 
 COPY services/ services/
 
-RUN mvn clean install -DskipTests -pl services/course-management-service -am
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn clean install -DskipTests -pl services/course-management-service -am
 
 # --- RUNTIME STAGE ---
 FROM eclipse-temurin:17-jre-focal

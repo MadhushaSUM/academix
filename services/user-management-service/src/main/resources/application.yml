@@ -9,6 +9,7 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:academix_user}
     password: ${SPRING_DATASOURCE_PASSWORD:academix_password}
     driver-class-name: org.postgresql.Driver
+
   # JPA (Hibernate) configuration
   jpa:
     hibernate:
@@ -26,6 +27,14 @@ eureka:
   instance:
     hostname: user-management-service
     prefer-ip-address: true
+
+# JWT Configuration
+jwt:
+  # IMPORTANT: Replace this with a strong, random, base64-encoded key.
+  # This key should be at least 256 bits (32 bytes) for HS256.
+  secret: WU9VUl9TVVBFUl9TRUNSRVRfSldUX0tFWV9USEFUX0lTX0FUX0xFQVNUXzI1Nl9CSVRTX0xPTkdfQU5EX0JBU0U2NF9FTkNPREVE
+  expiration:
+    ms: 86400000 # 24 hours in milliseconds (24 * 60 * 60 * 1000)
 
 management:
   endpoints:
