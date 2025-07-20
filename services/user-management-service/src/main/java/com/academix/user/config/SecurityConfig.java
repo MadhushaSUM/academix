@@ -25,16 +25,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
+@RequiredArgsConstructor
 public class SecurityConfig {
 
-    @Autowired
-    private UserRepository userRepository;
-
+    private final UserRepository userRepository;
     private final GatewayAuthenticationFilter gatewayAuthenticationFilter;
-
-    public SecurityConfig(GatewayAuthenticationFilter gatewayAuthenticationFilter) {
-        this.gatewayAuthenticationFilter = gatewayAuthenticationFilter;
-    }
 
     /**
      * Configures the security filter chain for HTTP requests.
