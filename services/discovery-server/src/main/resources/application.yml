@@ -1,5 +1,16 @@
 server:
   port: 8761
+  ssl:
+    enabled: true
+    key-store: file:/app/certs/discovery-server.jks # Changed to file: path
+    key-store-type: JKS
+    key-store-password: changeit # Keystore password (CHANGE THIS!)
+    key-alias: discovery-server # Alias of the private key entry in the keystore
+    key-password: changeit # Key password (CHANGE THIS!)
+    trust-store: file:/app/certs/discovery-server-truststore.jks # Changed to file: path
+    trust-store-type: JKS
+    trust-store-password: changeit # Truststore password (CHANGE THIS!)
+    client-auth: NEED # Require client certificate for mTLS
 
 spring:
   application:
@@ -9,9 +20,19 @@ eureka:
   client:
     register-with-eureka: false
     fetch-registry: false
+    # Eureka clients will connect to this URL over HTTPS
     service-url:
-      defaultZone: http://localhost:8761/eureka
+      defaultZone: https://discovery-server:8761/eureka # Use HTTPS for internal communication
+  instance:
+    # Important: Eureka needs to know its own secure port for client registration
+    secure-port: ${server.port}
+    secure-port-enabled: true
+    # Use HTTPS for status and health checks
+    status-page-url: https://${eureka.instance.hostname}:${server.port}/actuator/info
+    health-check-url: https://${eureka.instance.hostname}:${server.port}/actuator/health
+    home-page-url: https://${eureka.instance.hostname}:${server.port}/
 
+# Actuator configuration for health checks and monitoring
 management:
   endpoints:
     web:
@@ -21,6 +42,7 @@ management:
     health:
       show-details: always
 
+# Logging configuration
 logging:
   level:
     root: INFO

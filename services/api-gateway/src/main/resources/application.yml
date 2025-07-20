@@ -1,5 +1,14 @@
 server:
   port: 8080
+  ssl:
+    enabled: true
+    key-store: file:/app/certs/api-gateway.jks # Changed to file: path
+    key-store-password: changeit # Keystore password (CHANGE THIS!)
+    key-password: changeit # Key password (CHANGE THIS!)
+    trust-store: file:/app/certs/api-gateway-truststore.jks # Changed to file: path
+    trust-store-password: changeit # Truststore password (CHANGE THIS!)
+    client-auth: none
+
 
 spring:
   application:
@@ -38,6 +47,12 @@ eureka:
   instance:
     hostname: api-gateway
     prefer-ip-address: true
+    # Important: Register with secure port for internal communication
+    secure-port: ${server.port}
+    secure-port-enabled: true
+    status-page-url: https://${eureka.instance.hostname}:${server.port}/actuator/info
+    health-check-url: https://${eureka.instance.hostname}:${server.port}/actuator/health
+    home-page-url: https://${eureka.instance.hostname}:${server.port}/
 
 # JWT Configuration
 jwt:
@@ -47,6 +62,7 @@ jwt:
   expiration:
     ms: 86400000
 
+# Actuator configuration for health checks and monitoring
 management:
   endpoints:
     web:
@@ -56,6 +72,7 @@ management:
     health:
       show-details: always
 
+# Logging configuration
 logging:
   level:
     root: INFO

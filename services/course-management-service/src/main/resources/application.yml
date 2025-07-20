@@ -1,5 +1,15 @@
 server:
   port: 8080
+  ssl:
+    enabled: true
+    key-store: file:/app/certs/course-management-service.jks # Changed to file: path
+    key-store-type: JKS
+    key-store-password: changeit # Keystore password (CHANGE THIS!)
+    key-password: changeit # Key password (CHANGE THIS!)
+    trust-store: file:/app/certs/course-management-service-truststore.jks # Changed to file: path
+    trust-store-password: changeit # Truststore password (CHANGE THIS!)
+    client-auth: NEED # Require client certificate for mTLS
+
 
 spring:
   application:
@@ -24,9 +34,16 @@ eureka:
     service-url:
       defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://discovery-server:8761/eureka}
   instance:
-    hostname: course-management-service
+    hostname: course-management-service # Use the Docker Compose service name for registration
     prefer-ip-address: true
+    # Important: Register with secure port for internal communication
+    secure-port: ${server.port}
+    secure-port-enabled: true
+    status-page-url: https://${eureka.instance.hostname}:${server.port}/actuator/info
+    health-check-url: https://${eureka.instance.hostname}:${server.port}/actuator/health
+    home-page-url: https://${eureka.instance.hostname}:${server.port}/
 
+# Actuator configuration for health checks and monitoring
 management:
   endpoints:
     web:
@@ -36,6 +53,7 @@ management:
     health:
       show-details: always
 
+# Logging configuration
 logging:
   level:
     root: INFO

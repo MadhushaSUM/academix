@@ -10,6 +10,8 @@ RUN --mount=type=cache,target=/root/.m2 \
 
 COPY services/ services/
 
+COPY certs/ certs/
+
 RUN --mount=type=cache,target=/root/.m2 \
     mvn clean install -DskipTests -pl services/user-management-service -am
 
@@ -21,6 +23,8 @@ RUN mkdir /app && chown appuser:appuser /app
 WORKDIR /app
 
 COPY --from=builder /app/services/user-management-service/target/*.jar user-management-service.jar
+
+COPY --from=builder /app/certs/ certs/
 
 EXPOSE 8080
 USER appuser

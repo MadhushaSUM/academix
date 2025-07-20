@@ -14,6 +14,8 @@ RUN --mount=type=cache,target=/root/.m2 \
 
 COPY services/ services/
 
+COPY certs/ certs/
+
 RUN --mount=type=cache,target=/root/.m2 \
     mvn clean install -DskipTests -pl services/discovery-server -am
 
@@ -27,6 +29,8 @@ RUN mkdir /app && chown appuser:appuser /app
 WORKDIR /app
 
 COPY --from=builder /app/services/discovery-server/target/*.jar discovery-server.jar
+
+COPY --from=builder /app/certs/ certs/
 
 EXPOSE 8761
 
