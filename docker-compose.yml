@@ -46,32 +46,51 @@ services:
       retries: 5
 
   # -----------------------
-  # Eureka Discovery Server
+  # Consul Service Discovery Server
   # -----------------------
-  discovery-server:
-    build:
-      context: .
-      dockerfile: services/discovery-server/Dockerfile
-    container_name: discovery-server
+  consul-server:
+    image: hashicorp/consul:1.18.1
+    container_name: consul-server
+    command: "agent -server -ui -node=server-1 -bootstrap-expect=1 -client=0.0.0.0 -bind=0.0.0.0 -hcl='disable_anonymous_signature=true'"
     ports:
-      - "8761:8761"
-    environment:
-      EUREKA_CLIENT_REGISTER-WITH-EUREKA: "false"
-      EUREKA_CLIENT_FETCH-REGISTRY: "false"
-      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
-      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK: INFO
-      LOGGING_LEVEL_COM_ACADEMIX: DEBUG
-    # Mount Maven cache volume
-    volumes:
-      - maven_cache:/root/.m2
+      - "8500:8500" # HTTP API and UI
+      - "8600:8600/tcp" # DNS interface
+      - "8600:8600/udp" # DNS interface
     networks:
       - academix-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      test: ["CMD", "consul", "members"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      start_period: 10s
+
+  # -----------------------
+  # Eureka Discovery Server (COMMENTED OUT - REPLACED BY CONSUL)
+  # -----------------------
+  # discovery-server:
+  #   build:
+  #     context: .
+  #     dockerfile: services/discovery-server/Dockerfile
+  #   container_name: discovery-server
+  #   ports:
+  #     - "8761:8761"
+  #   environment:
+  #     EUREKA_CLIENT_REGISTER-WITH-EUREKA: "false"
+  #     EUREKA_CLIENT_FETCH-REGISTRY: "false"
+  #     MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
+  #     LOGGING_LEVEL_ORG_SPRINGFRAMEWORK: INFO
+  #     LOGGING_LEVEL_COM_ACADEMIX: DEBUG
+  #   volumes:
+  #     - maven_cache:/root/.m2
+  #   networks:
+  #     - academix-network
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 30s
 
   # -----------------------
   # User Management Service
@@ -90,13 +109,12 @@ services:
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
       LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB: DEBUG
       LOGGING_LEVEL_COM_ACADEMIX: DEBUG
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka
-      EUREKA_INSTANCE_HOSTNAME: user-management-service
-    # Mount Maven cache volume
     volumes:
       - maven_cache:/root/.m2
     depends_on:
       postgresql-user:
+        condition: service_healthy
+      consul-server:
         condition: service_healthy
     networks:
       - academix-network
@@ -124,15 +142,12 @@ services:
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
       LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB: DEBUG
       LOGGING_LEVEL_COM_ACADEMIX: DEBUG
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka
-      EUREKA_INSTANCE_HOSTNAME: course-management-service
-    # Mount Maven cache volume
     volumes:
       - maven_cache:/root/.m2
     depends_on:
       postgresql-course:
         condition: service_healthy
-      discovery-server:
+      consul-server:
         condition: service_healthy
     networks:
       - academix-network
@@ -157,13 +172,10 @@ services:
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
       LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB: DEBUG
       LOGGING_LEVEL_COM_ACADEMIX: DEBUG
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka
-      EUREKA_INSTANCE_HOSTNAME: api-gateway
-    # Mount Maven cache volume
     volumes:
       - maven_cache:/root/.m2
     depends_on:
-      discovery-server:
+      consul-server:
         condition: service_healthy
       user-management-service:
         condition: service_healthy
@@ -187,5 +199,4 @@ networks:
 volumes:
   pg_data_user:
   pg_data_course:
-  # Maven cache volume to persist dependencies
   maven_cache:

@@ -4,11 +4,15 @@ server:
 spring:
   application:
     name: user-management-service
-  datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgresql-user:5432/academix_users_db}
-    username: ${SPRING_DATASOURCE_USERNAME:academix_user}
-    password: ${SPRING_DATASOURCE_PASSWORD:academix_password}
-    driver-class-name: org.postgresql.Driver
+  cloud:
+    consul:
+      host: consul-server # Point to the Consul service in docker-compose
+      port: 8500
+      discovery:
+        prefer-ip-address: true # Recommended for Docker environments
+        health-check-path: /actuator/health # Consul will use this for health checks
+        health-check-interval: 10s # How often Consul checks health
+        instance-id: ${spring.application.name}:${random.value} # Unique ID for each instance
 
   # JPA (Hibernate) configuration
   jpa:
@@ -18,15 +22,6 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-
-eureka:
-  client:
-    enabled: true
-    service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://discovery-server:8761/eureka}
-  instance:
-    hostname: user-management-service
-    prefer-ip-address: true
 
 # JWT Configuration
 jwt:
