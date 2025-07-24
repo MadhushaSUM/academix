@@ -22,7 +22,7 @@ WORKDIR /app
 
 COPY --from=builder /app/services/user-management-service/target/*.jar user-management-service.jar
 
-EXPOSE 8080
+EXPOSE 8443
 USER appuser
 
 ENTRYPOINT ["java", "-jar", "user-management-service.jar"]

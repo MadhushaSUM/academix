@@ -101,17 +101,27 @@ services:
       dockerfile: services/user-management-service/Dockerfile
     container_name: user-management-service
     ports:
-      - "8081:8080"
+      - "8445:8443"
     environment:
-      SERVER_PORT: "8080"
+      SERVER_PORT: "8443"
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql-user:5432/academix_users_db
       SPRING_DATASOURCE_USERNAME: academix_user
       SPRING_DATASOURCE_PASSWORD: academix_password
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
       LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB: DEBUG
       LOGGING_LEVEL_COM_ACADEMIX: DEBUG
+      # SSL Configuration for mTLS
+      SERVER_SSL_ENABLED: "true"
+      SERVER_SSL_KEY_STORE: "/certs/user-management-service.p12"
+      SERVER_SSL_KEY_STORE_PASSWORD: ${KEYSTORE_PASSWORD:-changeit}
+      SERVER_SSL_KEY_STORE_TYPE: "PKCS12"
+      SERVER_SSL_TRUST_STORE: "/certs/truststore.p12"
+      SERVER_SSL_TRUST_STORE_PASSWORD: ${TRUSTSTORE_PASSWORD:-changeit}
+      SERVER_SSL_CLIENT_AUTH: "need"  # Require client certificates (mTLS)
     volumes:
       - maven_cache:/root/.m2
+      - ./certs/user-management-service:/certs:ro  # Mount certificates
+      - ./certs/ca:/ca:ro   # Mount CA certificate for health checks
     depends_on:
       postgresql-user:
         condition: service_healthy
@@ -120,7 +130,13 @@ services:
     networks:
       - academix-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      test: [
+        "CMD", "curl", "-f",
+        "--cert", "/certs/user-management-service.crt",
+        "--key", "/certs/user-management-service.key",
+        "--cacert", "/ca/ca.crt",
+        "https://localhost:8443/actuator/health"
+      ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -135,16 +151,27 @@ services:
       dockerfile: services/course-management-service/Dockerfile
     container_name: course-management-service
     ports:
-      - "8082:8080"
+      - "8444:8443"
     environment:
+      SERVER_PORT: "8443"
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql-course:5432/academix_courses_db
       SPRING_DATASOURCE_USERNAME: academix_user
       SPRING_DATASOURCE_PASSWORD: academix_password
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
       LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB: DEBUG
       LOGGING_LEVEL_COM_ACADEMIX: DEBUG
+      # SSL Configuration for mTLS
+      SERVER_SSL_ENABLED: "true"
+      SERVER_SSL_KEY_STORE: "/certs/course-management-service.p12"
+      SERVER_SSL_KEY_STORE_PASSWORD: ${KEYSTORE_PASSWORD:-changeit}
+      SERVER_SSL_KEY_STORE_TYPE: "PKCS12"
+      SERVER_SSL_TRUST_STORE: "/certs/truststore.p12"
+      SERVER_SSL_TRUST_STORE_PASSWORD: ${TRUSTSTORE_PASSWORD:-changeit}
+      SERVER_SSL_CLIENT_AUTH: "need"  # Require client certificates (mTLS)
     volumes:
       - maven_cache:/root/.m2
+      - ./certs/course-management-service:/certs:ro  # Mount certificates
+      - ./certs/ca:/ca:ro   # Mount CA certificate for health checks
     depends_on:
       postgresql-course:
         condition: service_healthy
@@ -153,7 +180,13 @@ services:
     networks:
       - academix-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      test: [
+        "CMD", "curl", "-f",
+        "--cert", "/certs/course-management-service.crt",
+        "--key", "/certs/course-management-service.key",
+        "--cacert", "/ca/ca.crt",
+        "https://localhost:8443/actuator/health"
+      ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -184,6 +217,7 @@ services:
     volumes:
       - maven_cache:/root/.m2
       - ./certs/api-gateway:/certs:ro  # Mount certificates
+      - ./certs/ca:/ca:ro  # Mount CA directory
     depends_on:
       consul-server:
         condition: service_healthy

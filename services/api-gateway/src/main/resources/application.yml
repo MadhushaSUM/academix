@@ -34,7 +34,7 @@ spring:
       routes:
         # Route for User Management Service
         - id: user-management-service-route
-          uri: http://user-management-service:8080
+          uri: https://user-management-service:8443
           predicates:
             - Path=/api/v1/users/**, /api/v1/auth/**
           filters:
@@ -42,12 +42,21 @@ spring:
 
         # Route for Course Management Service
         - id: course-management-service-route
-          uri: http://course-management-service:8080
+          uri: https://course-management-service:8443
           predicates:
             - Path=/api/v1/courses/**
           filters:
             - StripPrefix=2 # Removes /api/v1 from the path before forwarding
       httpclient:
+        ssl:
+          use-insecure-trust-manager: false
+          key-store: /certs/api-gateway.p12
+          key-store-password: ${KEYSTORE_PASSWORD:changeit}
+          key-store-type: PKCS12
+          trust-store: /certs/truststore.p12
+          trust-store-password: ${TRUSTSTORE_PASSWORD:changeit}
+          trusted-x509-certificates: # Add trusted certificates
+            - /ca/ca.crt
         connect-timeout: 5000
         response-timeout: 10s
 
@@ -77,3 +86,4 @@ logging:
     org.springframework.cloud.gateway: DEBUG
     org.springframework.cloud.netflix: DEBUG
     com.academix: DEBUG
+    io.netty.handler.ssl: DEBUG  # for SSL debugging

@@ -23,7 +23,7 @@ WORKDIR /app
 
 COPY --from=builder /app/services/course-management-service/target/*.jar course-management-service.jar
 
-EXPOSE 8080
+EXPOSE 8443
 
 USER appuser
 
