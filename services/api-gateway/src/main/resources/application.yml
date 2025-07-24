@@ -1,27 +1,40 @@
 server:
-  port: 8080
+  port: 8443
+  ssl:
+    enabled: true
+    key-store: /certs/api-gateway.p12
+    key-store-password: ${KEYSTORE_PASSWORD:changeit}
+    key-store-type: PKCS12
+    trust-store: /certs/truststore.p12
+    trust-store-password: ${TRUSTSTORE_PASSWORD:changeit}
+    client-auth: want  # Allow but don't require client certificates (external clients)
+
 
 spring:
   application:
     name: api-gateway
+
   cloud:
     consul:
       host: consul-server # Point to the Consul service in docker-compose
       port: 8500
       discovery:
-        prefer-ip-address: true # Recommended for Docker environments
-        health-check-path: /actuator/health # Consul will use this for health checks
-        health-check-interval: 10s # How often Consul checks health
-        instance-id: ${spring.application.name}:${random.value} # Unique ID for each instance
+        service-name: ${spring.application.name}
+        instance-id: ${spring.application.name}:${random.value}
+        prefer-ip-address: true
+        health-check-path: /actuator/health
+        health-check-interval: 10s
+
     gateway:
       discovery:
         locator:
           enabled: true
           lower-case-service-id: true
+
       routes:
         # Route for User Management Service
         - id: user-management-service-route
-          uri: lb://user-management-service # 'lb' for load-balancing via Eureka
+          uri: http://user-management-service:8080
           predicates:
             - Path=/api/v1/users/**, /api/v1/auth/**
           filters:
@@ -29,11 +42,14 @@ spring:
 
         # Route for Course Management Service
         - id: course-management-service-route
-          uri: lb://course-management-service
+          uri: http://course-management-service:8080
           predicates:
             - Path=/api/v1/courses/**
           filters:
             - StripPrefix=2 # Removes /api/v1 from the path before forwarding
+      httpclient:
+        connect-timeout: 5000
+        response-timeout: 10s
 
   main:
     web-application-type: reactive

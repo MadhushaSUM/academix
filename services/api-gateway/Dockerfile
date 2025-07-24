@@ -23,7 +23,7 @@ WORKDIR /app
 
 COPY --from=builder /app/services/api-gateway/target/*.jar api-gateway.jar
 
-EXPOSE 8080
+EXPOSE 8443
 
 USER appuser
 

@@ -103,6 +103,7 @@ services:
     ports:
       - "8081:8080"
     environment:
+      SERVER_PORT: "8080"
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql-user:5432/academix_users_db
       SPRING_DATASOURCE_USERNAME: academix_user
       SPRING_DATASOURCE_PASSWORD: academix_password
@@ -167,13 +168,22 @@ services:
       dockerfile: services/api-gateway/Dockerfile
     container_name: api-gateway
     ports:
-      - "8080:8080"
+      - "8443:8443"
     environment:
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
       LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB: DEBUG
       LOGGING_LEVEL_COM_ACADEMIX: DEBUG
+      # SSL Configuration
+      SERVER_SSL_ENABLED: "true"
+      SERVER_SSL_KEY_STORE: "/certs/api-gateway.p12"
+      SERVER_SSL_KEY_STORE_PASSWORD: ${KEYSTORE_PASSWORD:-changeit}
+      SERVER_SSL_KEY_STORE_TYPE: "PKCS12"
+      SERVER_SSL_TRUST_STORE: "/certs/truststore.p12"
+      SERVER_SSL_TRUST_STORE_PASSWORD: ${TRUSTSTORE_PASSWORD:-changeit}
+      SERVER_SSL_CLIENT_AUTH: "want"
     volumes:
       - maven_cache:/root/.m2
+      - ./certs/api-gateway:/certs:ro  # Mount certificates
     depends_on:
       consul-server:
         condition: service_healthy
@@ -184,7 +194,7 @@ services:
     networks:
       - academix-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      test: [ "CMD", "curl", "-f", "https://localhost:8443/actuator/health", "--insecure" ]
       interval: 10s
       timeout: 5s
       retries: 5
