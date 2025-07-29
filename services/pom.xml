@@ -55,7 +55,6 @@
         <module>api-gateway</module>
         <module>user-management-service</module>
         <module>course-management-service</module>
-        <module>discovery-server</module>
     </modules>
 
 </project>

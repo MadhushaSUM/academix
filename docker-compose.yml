@@ -46,32 +46,24 @@ services:
       retries: 5
 
   # -----------------------
-  # Eureka Discovery Server
+  # Consul Service Discovery Server
   # -----------------------
-  discovery-server:
-    build:
-      context: .
-      dockerfile: services/discovery-server/Dockerfile
-    container_name: discovery-server
+  consul-server:
+    image: hashicorp/consul:1.18.1
+    container_name: consul-server
+    command: "agent -server -ui -node=server-1 -bootstrap-expect=1 -client=0.0.0.0 -bind=0.0.0.0 -hcl='disable_anonymous_signature=true'"
     ports:
-      - "8761:8761"
-    environment:
-      EUREKA_CLIENT_REGISTER-WITH-EUREKA: "false"
-      EUREKA_CLIENT_FETCH-REGISTRY: "false"
-      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
-      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK: INFO
-      LOGGING_LEVEL_COM_ACADEMIX: DEBUG
-    # Mount Maven cache volume
-    volumes:
-      - maven_cache:/root/.m2
+      - "8500:8500" # HTTP API and UI
+      - "8600:8600/tcp" # DNS interface
+      - "8600:8600/udp" # DNS interface
     networks:
       - academix-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      test: ["CMD", "consul", "members"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      start_period: 10s
 
   # -----------------------
   # User Management Service
@@ -82,26 +74,42 @@ services:
       dockerfile: services/user-management-service/Dockerfile
     container_name: user-management-service
     ports:
-      - "8081:8080"
+      - "8445:8443"
     environment:
+      SERVER_PORT: "8443"
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql-user:5432/academix_users_db
       SPRING_DATASOURCE_USERNAME: academix_user
       SPRING_DATASOURCE_PASSWORD: academix_password
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
       LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB: DEBUG
       LOGGING_LEVEL_COM_ACADEMIX: DEBUG
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka
-      EUREKA_INSTANCE_HOSTNAME: user-management-service
-    # Mount Maven cache volume
+      # SSL Configuration for mTLS
+      SERVER_SSL_ENABLED: "true"
+      SERVER_SSL_KEY_STORE: "/certs/user-management-service.p12"
+      SERVER_SSL_KEY_STORE_PASSWORD: ${KEYSTORE_PASSWORD:-changeit}
+      SERVER_SSL_KEY_STORE_TYPE: "PKCS12"
+      SERVER_SSL_TRUST_STORE: "/certs/truststore.p12"
+      SERVER_SSL_TRUST_STORE_PASSWORD: ${TRUSTSTORE_PASSWORD:-changeit}
+      SERVER_SSL_CLIENT_AUTH: "need"  # Require client certificates (mTLS)
     volumes:
       - maven_cache:/root/.m2
+      - ./certs/user-management-service:/certs:ro  # Mount certificates
+      - ./certs/ca:/ca:ro   # Mount CA certificate for health checks
     depends_on:
       postgresql-user:
+        condition: service_healthy
+      consul-server:
         condition: service_healthy
     networks:
       - academix-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      test: [
+        "CMD", "curl", "-f",
+        "--cert", "/certs/user-management-service.crt",
+        "--key", "/certs/user-management-service.key",
+        "--cacert", "/ca/ca.crt",
+        "https://localhost:8443/actuator/health"
+      ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -116,28 +124,42 @@ services:
       dockerfile: services/course-management-service/Dockerfile
     container_name: course-management-service
     ports:
-      - "8082:8080"
+      - "8444:8443"
     environment:
+      SERVER_PORT: "8443"
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql-course:5432/academix_courses_db
       SPRING_DATASOURCE_USERNAME: academix_user
       SPRING_DATASOURCE_PASSWORD: academix_password
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
       LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB: DEBUG
       LOGGING_LEVEL_COM_ACADEMIX: DEBUG
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka
-      EUREKA_INSTANCE_HOSTNAME: course-management-service
-    # Mount Maven cache volume
+      # SSL Configuration for mTLS
+      SERVER_SSL_ENABLED: "true"
+      SERVER_SSL_KEY_STORE: "/certs/course-management-service.p12"
+      SERVER_SSL_KEY_STORE_PASSWORD: ${KEYSTORE_PASSWORD:-changeit}
+      SERVER_SSL_KEY_STORE_TYPE: "PKCS12"
+      SERVER_SSL_TRUST_STORE: "/certs/truststore.p12"
+      SERVER_SSL_TRUST_STORE_PASSWORD: ${TRUSTSTORE_PASSWORD:-changeit}
+      SERVER_SSL_CLIENT_AUTH: "need"  # Require client certificates (mTLS)
     volumes:
       - maven_cache:/root/.m2
+      - ./certs/course-management-service:/certs:ro  # Mount certificates
+      - ./certs/ca:/ca:ro   # Mount CA certificate for health checks
     depends_on:
       postgresql-course:
         condition: service_healthy
-      discovery-server:
+      consul-server:
         condition: service_healthy
     networks:
       - academix-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      test: [
+        "CMD", "curl", "-f",
+        "--cert", "/certs/course-management-service.crt",
+        "--key", "/certs/course-management-service.key",
+        "--cacert", "/ca/ca.crt",
+        "https://localhost:8443/actuator/health"
+      ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -152,18 +174,25 @@ services:
       dockerfile: services/api-gateway/Dockerfile
     container_name: api-gateway
     ports:
-      - "8080:8080"
+      - "8443:8443"
     environment:
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
       LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB: DEBUG
       LOGGING_LEVEL_COM_ACADEMIX: DEBUG
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka
-      EUREKA_INSTANCE_HOSTNAME: api-gateway
-    # Mount Maven cache volume
+      # SSL Configuration
+      SERVER_SSL_ENABLED: "true"
+      SERVER_SSL_KEY_STORE: "/certs/api-gateway.p12"
+      SERVER_SSL_KEY_STORE_PASSWORD: ${KEYSTORE_PASSWORD:-changeit}
+      SERVER_SSL_KEY_STORE_TYPE: "PKCS12"
+      SERVER_SSL_TRUST_STORE: "/certs/truststore.p12"
+      SERVER_SSL_TRUST_STORE_PASSWORD: ${TRUSTSTORE_PASSWORD:-changeit}
+      SERVER_SSL_CLIENT_AUTH: "want"
     volumes:
       - maven_cache:/root/.m2
+      - ./certs/api-gateway:/certs:ro  # Mount certificates
+      - ./certs/ca:/ca:ro  # Mount CA directory
     depends_on:
-      discovery-server:
+      consul-server:
         condition: service_healthy
       user-management-service:
         condition: service_healthy
@@ -172,7 +201,7 @@ services:
     networks:
       - academix-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      test: [ "CMD", "curl", "-f", "https://localhost:8443/actuator/health", "--insecure" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -187,5 +216,4 @@ networks:
 volumes:
   pg_data_user:
   pg_data_course:
-  # Maven cache volume to persist dependencies
   maven_cache:

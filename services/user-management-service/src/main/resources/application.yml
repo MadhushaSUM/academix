@@ -2,23 +2,33 @@ server:
   port: 8080
   ssl:
     enabled: true
-    key-store: file:/app/certs/user-management-service.jks # Changed to file: path
-    key-store-type: JKS
-    key-store-password: changeit # Keystore password (CHANGE THIS!)
-    key-password: changeit # Key password (CHANGE THIS!)
-    trust-store: file:/app/certs/user-management-service-truststore.jks # Changed to file: path
-    trust-store-type: JKS
-    trust-store-password: changeit # Truststore password (CHANGE THIS!)
-    client-auth: NEED # Require client certificate for mTLS from API Gateway
+    key-store: /certs/user-management-service.p12
+    key-store-password: ${KEYSTORE_PASSWORD:changeit}
+    key-store-type: PKCS12
+    trust-store: /certs/truststore.p12
+    trust-store-password: ${TRUSTSTORE_PASSWORD:changeit}
+    client-auth: need  # Require client certificates for mTLS
 
 spring:
   application:
     name: user-management-service
+
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgresql-user:5432/academix_users_db}
-    username: ${SPRING_DATASOURCE_USERNAME:academix_user}
-    password: ${SPRING_DATASOURCE_PASSWORD:academix_password}
+    url: jdbc:postgresql://postgresql-user:5432/academix_users_db
+    username: academix_user
+    password: academix_password
     driver-class-name: org.postgresql.Driver
+
+  cloud:
+    consul:
+      host: consul-server # Point to the Consul service in docker-compose
+      port: 8500
+      discovery:
+        service-name: ${spring.application.name}
+        instance-id: ${spring.application.name}:${random.value}
+        prefer-ip-address: true
+        health-check-path: /actuator/health
+        health-check-interval: 10s
 
   # JPA (Hibernate) configuration
   jpa:
@@ -29,21 +39,6 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
-eureka:
-  client:
-    enabled: true
-    service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://discovery-server:8761/eureka}
-  instance:
-    hostname: user-management-service # Use the Docker Compose service name for registration
-    prefer-ip-address: true # Prefer IP address for registration (useful in Docker)
-    # Important: Register with secure port for internal communication
-    secure-port: ${server.port}
-    secure-port-enabled: true
-    status-page-url: https://${eureka.instance.hostname}:${server.port}/actuator/info
-    health-check-url: https://${eureka.instance.hostname}:${server.port}/actuator/health
-    home-page-url: https://${eureka.instance.hostname}:${server.port}/
-
 # JWT Configuration
 jwt:
   # IMPORTANT: Replace this with a strong, random, base64-encoded key.
@@ -52,7 +47,6 @@ jwt:
   expiration:
     ms: 86400000 # 24 hours in milliseconds (24 * 60 * 60 * 1000)
 
-# Actuator configuration for health checks and monitoring
 management:
   endpoints:
     web:
@@ -62,7 +56,6 @@ management:
     health:
       show-details: always
 
-# Logging configuration
 logging:
   level:
     root: INFO

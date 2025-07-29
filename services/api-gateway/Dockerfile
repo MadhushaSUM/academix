@@ -11,8 +11,6 @@ RUN --mount=type=cache,target=/root/.m2 \
 
 COPY services/ services/
 
-COPY certs/ certs/
-
 RUN --mount=type=cache,target=/root/.m2 \
     mvn clean install -DskipTests -pl services/api-gateway -am
 
@@ -25,9 +23,7 @@ WORKDIR /app
 
 COPY --from=builder /app/services/api-gateway/target/*.jar api-gateway.jar
 
-COPY --from=builder /app/certs/ certs/
-
-EXPOSE 8080
+EXPOSE 8443
 
 USER appuser
 

@@ -35,26 +35,22 @@ public class JwtAuthenticationFilter implements WebFilter {
             return chain.filter(exchange);
         }
 
-        return extractTokenFromRequest(exchange.getRequest())
-                .cast(String.class)
-                .flatMap(token -> validateAndProcessToken(token, exchange, chain))
-                .switchIfEmpty(chain.filter(exchange));
+        // Extract token and process
+        String bearerToken = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+
+        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+            String token = bearerToken.substring(7);
+            return validateAndProcessToken(token, exchange, chain);
+        } else {
+            // No valid token - return 401
+            return unauthorizedResponse(exchange);
+        }
     }
 
     private boolean isPublicPath(String path) {
         return path.startsWith("/api/v1/auth/") ||
                 path.startsWith("/actuator/") ||
                 path.startsWith("/eureka/");
-    }
-
-    private Mono<?> extractTokenFromRequest(ServerHttpRequest request) {
-        String bearerToken = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-
-        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
-            return Mono.just(bearerToken.substring(7));
-        }
-
-        return Mono.empty();
     }
 
     private Mono<Void> validateAndProcessToken(String token, ServerWebExchange exchange, WebFilterChain chain) {

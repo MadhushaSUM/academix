@@ -11,8 +11,6 @@ RUN --mount=type=cache,target=/root/.m2 \
 
 COPY services/ services/
 
-COPY certs/ certs/
-
 RUN --mount=type=cache,target=/root/.m2 \
     mvn clean install -DskipTests -pl services/course-management-service -am
 
@@ -25,9 +23,7 @@ WORKDIR /app
 
 COPY --from=builder /app/services/course-management-service/target/*.jar course-management-service.jar
 
-COPY --from=builder /app/certs/ certs/
-
-EXPOSE 8080
+EXPOSE 8443
 
 USER appuser
 

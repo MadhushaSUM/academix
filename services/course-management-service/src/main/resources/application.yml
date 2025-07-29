@@ -1,24 +1,19 @@
 server:
   port: 8080
-  ssl:
-    enabled: true
-    key-store: file:/app/certs/course-management-service.jks # Changed to file: path
-    key-store-type: JKS
-    key-store-password: changeit # Keystore password (CHANGE THIS!)
-    key-password: changeit # Key password (CHANGE THIS!)
-    trust-store: file:/app/certs/course-management-service-truststore.jks # Changed to file: path
-    trust-store-password: changeit # Truststore password (CHANGE THIS!)
-    client-auth: NEED # Require client certificate for mTLS
-
 
 spring:
   application:
     name: course-management-service
-  datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgresql-course:5432/academix_courses_db}
-    username: ${SPRING_DATASOURCE_USERNAME:academix_user}
-    password: ${SPRING_DATASOURCE_PASSWORD:academix_password}
-    driver-class-name: org.postgresql.Driver
+  cloud:
+    consul:
+      host: consul-server # Point to the Consul service in docker-compose
+      port: 8500
+      discovery:
+        prefer-ip-address: true # Recommended for Docker environments
+        health-check-path: /actuator/health # Consul will use this for health checks
+        health-check-interval: 10s # How often Consul checks health
+        instance-id: ${spring.application.name}:${random.value} # Unique ID for each instance
+
   # JPA (Hibernate) configuration
   jpa:
     hibernate:
@@ -28,22 +23,6 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
-eureka:
-  client:
-    enabled: true
-    service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://discovery-server:8761/eureka}
-  instance:
-    hostname: course-management-service # Use the Docker Compose service name for registration
-    prefer-ip-address: true
-    # Important: Register with secure port for internal communication
-    secure-port: ${server.port}
-    secure-port-enabled: true
-    status-page-url: https://${eureka.instance.hostname}:${server.port}/actuator/info
-    health-check-url: https://${eureka.instance.hostname}:${server.port}/actuator/health
-    home-page-url: https://${eureka.instance.hostname}:${server.port}/
-
-# Actuator configuration for health checks and monitoring
 management:
   endpoints:
     web:
@@ -53,7 +32,6 @@ management:
     health:
       show-details: always
 
-# Logging configuration
 logging:
   level:
     root: INFO
