@@ -66,33 +66,6 @@ services:
       start_period: 10s
 
   # -----------------------
-  # Eureka Discovery Server (COMMENTED OUT - REPLACED BY CONSUL)
-  # -----------------------
-  # discovery-server:
-  #   build:
-  #     context: .
-  #     dockerfile: services/discovery-server/Dockerfile
-  #   container_name: discovery-server
-  #   ports:
-  #     - "8761:8761"
-  #   environment:
-  #     EUREKA_CLIENT_REGISTER-WITH-EUREKA: "false"
-  #     EUREKA_CLIENT_FETCH-REGISTRY: "false"
-  #     MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
-  #     LOGGING_LEVEL_ORG_SPRINGFRAMEWORK: INFO
-  #     LOGGING_LEVEL_COM_ACADEMIX: DEBUG
-  #   volumes:
-  #     - maven_cache:/root/.m2
-  #   networks:
-  #     - academix-network
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
-  #     start_period: 30s
-
-  # -----------------------
   # User Management Service
   # -----------------------
   user-management-service:
